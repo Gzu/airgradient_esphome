@@ -19,3 +19,4 @@ sensor:
     compensation:  # Remove this block if no temp/humidity sensor present for compensation
       temperature_source: temp
       humidity_source: humidity
+    update_interval: ${sensor_update_interval}
