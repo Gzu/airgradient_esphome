@@ -7,7 +7,7 @@ globals:
     initial_value: '0'
 
 sensor:
- - platform: template
+  - platform: template
     name: "AQI"
     id: aqi_value
     update_interval: ${sensor_update_interval}
