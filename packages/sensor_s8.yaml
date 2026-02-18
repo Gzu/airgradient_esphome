@@ -15,6 +15,18 @@ sensor:
         - offset: $co2_offset
     id: senseair_co2
     uart_id: senseair_co2_uart
+    update_interval: ${sensor_update_interval}
+  - platform: copy
+    source_id: co2
+    name: "Co2 AQI"
+    id: co2_aqi
+    filters:
+      - offset: -500
+      - multiply: 0.25
+      - round: 0
+      - clamp:
+          min_value: 0
+          max_value: 500
 
 button:
   # https://github.com/esphome/issues/issues/2444
