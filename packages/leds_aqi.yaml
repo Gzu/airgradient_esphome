@@ -1,0 +1,131 @@
+globals: 
+  - id: global_aqi_source
+    type: int
+    initial_value: '0'
+  - id: global_aqi_value
+    type: float
+    initial_value: '0'
+    
+sensor: 
+  - platform: template
+    name: "AQI"
+    id: aqi_value
+    update_interval: ${sensor_update_interval}
+    device_class: aqi
+    icon: "mdi:air-filter"
+    accuracy_decimals: 0
+    filters: 
+      - skip_initial: 1 
+    lambda: |-
+      float temp_aqi = 0;
+      if (id(co2_aqi).state > temp_aqi) {
+        id(global_aqi_source) = 0;
+        temp_aqi = id(co2_aqi).state;
+      }
+      if (id(pm_2_5_aqi).state > temp_aqi) {
+        id(global_aqi_source) = 1;
+        temp_aqi = id(pm_2_5_aqi).state;
+      }
+      if (id(voc).state > temp_aqi) {
+        id(global_aqi_source) = 2;
+        temp_aqi = id(voc).state;
+      }
+      if (id(nox).state > temp_aqi) {
+        id(global_aqi_source) = 3;
+        temp_aqi = id(nox).state;
+      }
+      return temp_aqi;
+    on_value: 
+      then: 
+        - if: 
+            condition:
+              lambda: |- 
+                ESP_LOGD(
+                  "STATE",
+                  "activate_leds=%s | aqi=%.0f",
+                  id(activate_leds).state ? "ON" : "OFF",
+                  x
+                );
+                return (id(activate_leds).state) && (x <= 125);
+            then: 
+              - switch.turn_off: green_led
+              - switch.turn_off: yellow_led
+              - switch.turn_off: red_led
+        - if: 
+            condition: 
+              lambda: |- 
+                ESP_LOGD(
+                  "STATE",
+                  "activate_leds=%s | green_led=%s | aqi=%.0f",
+                  id(activate_leds).state ? "ON" : "OFF",
+                  id(green_led).state ? "ON" : "OFF",
+                  x
+                );
+                return (id(activate_leds).state) && (x > 125) && (x <= 250) && (!id(green_led).state);
+            then: 
+              - switch.turn_on: green_led
+              - switch.turn_off: yellow_led
+              - switch.turn_off: red_led
+        - if: 
+            condition: 
+              lambda: |- 
+                ESP_LOGD(
+                  "STATE",
+                  "activate_leds=%s | yellow_led=%s | aqi=%.0f",
+                  id(activate_leds).state ? "ON" : "OFF",
+                  id(yellow_led).state ? "ON" : "OFF",
+                  x
+                );
+                return (id(activate_leds).state) && (x > 250) && (x <= 375) && (!id(yellow_led).state);
+            then: 
+              - switch.turn_off: green_led
+              - switch.turn_on: yellow_led
+              - switch.turn_off: red_led
+        - if: 
+            condition: 
+              lambda: |- 
+                ESP_LOGD(
+                  "STATE",
+                  "activate_leds=%s | red_led=%s | aqi=%.0f",
+                  id(activate_leds).state ? "ON" : "OFF",
+                  id(red_led).state ? "ON" : "OFF",
+                  x
+                );
+                return (id(activate_leds).state) && (x > 375) && (!id(red_led).state);
+            then: 
+              - switch.turn_off: green_led
+              - switch.turn_off: yellow_led
+              - switch.turn_on: red_led
+              
+switch: 
+  - platform: template
+    name: "Activate LEDS"
+    id: activate_leds
+    restore_mode: RESTORE_DEFAULT_ON
+    optimistic: true
+    entity_category: config
+    icon: mdi:monitor
+    disabled_by_default: false
+    assumed_state: false
+    on_turn_off: 
+      then: 
+        - switch.turn_off: green_led
+        - switch.turn_off: yellow_led
+        - switch.turn_off: red_led
+    on_turn_on: 
+        - component.update: aqi_value
+        
+  - platform: gpio
+    pin: D0
+    name: "Green LED"
+    id: green_led
+
+  - platform: gpio
+    pin: D8
+    name: "Yellow LED"
+    id: yellow_led
+
+  - platform: gpio
+    pin: D7
+    name: "Red LED"
+    id: red_led
