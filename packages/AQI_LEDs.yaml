@@ -1,12 +1,12 @@
-globals:
+globals: 
   - id: global_aqi_source
     type: int
     initial_value: '0'
   - id: global_aqi_value
     type: float
     initial_value: '0'
-
-sensor:
+    
+sensor: 
   - platform: template
     name: "AQI"
     id: aqi_value
@@ -14,7 +14,7 @@ sensor:
     device_class: aqi
     icon: "mdi:air-filter"
     accuracy_decimals: 0
-    filters:
+    filters: 
       - skip_initial: 1 
     lambda: |-
       float temp_aqi = 0;
@@ -36,7 +36,7 @@ sensor:
       }
       return temp_aqi;
     on_value: 
-      then:
+      then: 
         - if: 
             condition:
               lambda: |- 
@@ -47,12 +47,12 @@ sensor:
                   x
                 );
                 return (id(activate_leds).state) && (x <= 125);
-            then:
+            then: 
               - switch.turn_off: green_led
               - switch.turn_off: yellow_led
               - switch.turn_off: red_led
         - if: 
-            condition:
+            condition: 
               lambda: |- 
                 ESP_LOGD(
                   "STATE",
@@ -62,12 +62,12 @@ sensor:
                   x
                 );
                 return (id(activate_leds).state) && (x > 125) && (x <= 250) && (!id(green_led).state);
-            then:
+            then: 
               - switch.turn_on: green_led
               - switch.turn_off: yellow_led
               - switch.turn_off: red_led
         - if: 
-            condition:
+            condition: 
               lambda: |- 
                 ESP_LOGD(
                   "STATE",
@@ -77,12 +77,12 @@ sensor:
                   x
                 );
                 return (id(activate_leds).state) && (x > 250) && (x <= 375) && (!id(yellow_led).state);
-            then:
+            then: 
               - switch.turn_off: green_led
               - switch.turn_on: yellow_led
               - switch.turn_off: red_led
         - if: 
-            condition:
+            condition: 
               lambda: |- 
                 ESP_LOGD(
                   "STATE",
@@ -92,12 +92,12 @@ sensor:
                   x
                 );
                 return (id(activate_leds).state) && (x > 375) && (!id(red_led).state);
-            then:
+            then: 
               - switch.turn_off: green_led
               - switch.turn_off: yellow_led
               - switch.turn_on: red_led
               
-switch:
+switch: 
   - platform: template
     name: "Activate LEDS"
     id: activate_leds
@@ -108,11 +108,11 @@ switch:
     disabled_by_default: false
     assumed_state: false
     on_turn_off: 
-      then:
+      then: 
         - switch.turn_off: green_led
         - switch.turn_off: yellow_led
         - switch.turn_off: red_led
-    on_turn_on:
+    on_turn_on: 
         - component.update: aqi_value
         
   - platform: gpio
