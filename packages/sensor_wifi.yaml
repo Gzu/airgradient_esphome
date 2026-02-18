@@ -3,3 +3,10 @@ sensor:
     name: "WiFi Signal"
     id: wifi_dbm
     update_interval: ${sensor_update_interval}
+    disabled_by_default: false
+    force_update: false
+    unit_of_measurement: dBm
+    accuracy_decimals: 0
+    device_class: signal_strength
+    state_class: measurement
+    entity_category: diagnostic
