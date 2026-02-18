@@ -1,10 +1,4 @@
----
-substitutions:
-  pm_2_5_scaling_factor: '1'
-  pm_2_5_intercept: '0'
-
-sensor:
-  - platform: pmsx003
+- platform: pmsx003
     # Default interval of updating every second, but changing to 30 seconds to extend life but keep fan spinning
     # PMS5003 https://esphome.io/components/sensor/pmsx003.html
     type: PMSX003
@@ -26,7 +20,7 @@ sensor:
       name: "PM 0.3"
       id: pm_0_3um
       filters:
-    update_interval: 30s
+    update_interval: ${sensor_update_interval}
 
   - platform: template
     # Implements PM2.5 correction algorithm supported by AirGradient from EPA and optionally batch specific corrections
@@ -34,7 +28,7 @@ sensor:
     # https://document.airnow.gov/airnow-fire-and-smoke-map-questions-and-answers.pdf
     name: "PM 2.5"
     id: pm_2_5
-    update_interval: 30s
+    update_interval: ${sensor_update_interval}
     device_class: pm25  # Added to report properly to HomeKit
     unit_of_measurement: µg/m³
     icon: mdi:chemical-weapon
@@ -79,7 +73,7 @@ sensor:
     # Depends on another sensor providing an ID of pm_2_5 such as a pms5003
     name: "PM 2.5 AQI"
     id: pm_2_5_aqi
-    update_interval: 5 min
+    update_interval: ${sensor_update_interval}
     device_class: aqi
     icon: "mdi:air-filter"
     accuracy_decimals: 0
