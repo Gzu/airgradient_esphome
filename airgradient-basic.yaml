@@ -6,9 +6,12 @@ substitutions:
   name: "ag-basic"
   friendly_name: "AG Basic"
   name_add_mac_suffix: "false"  # Must have quotes around value
+  sensor_update_interval: 60s
 
 # Enable Home Assistant API
-api:  # Add encryption key as desired
+api:
+  encryption:
+    key:  # Add encryption key as desired
 
 ota:
   - platform: esphome
