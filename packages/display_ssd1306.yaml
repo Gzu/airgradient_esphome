@@ -1,4 +1,3 @@
-
 font:
   - file:
       type: gfonts
@@ -7,43 +6,97 @@ font:
     id: font1
     size: 22
     glyphs: '!"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/µ³'
-  #   glyphs: 'cdCOTEHUMFP.°%0123456789 Na'
+  - file:
+      type: gfonts
+      family: Open Sans
+    id: font_large
+    size: 27
+    glyphs: '!"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/µ³'
+  - file:
+      type: gfonts
+      family: Open Sans
+    id: font_small
+    size: 18
+    glyphs: '!"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/µ³'
 
 display:
   - platform: ssd1306_i2c
     # https://esphome.io/components/display/ssd1306.html?highlight=display
     model: "SSD1306 64x48"
     id: oled_display
-    reset_pin: D0
     address: 0x3C
-    # rotation: 180 # Enable to 180 to flip screen around
+    rotation: 180
     pages:
-      - id: display_pm2
-        lambda: |-
-          it.print(0, 0, id(font1), "PM2");
-          it.printf(64, 24, id(font1), TextAlign::TOP_RIGHT, "%.0f",id(pm_2_5).state);
-      - id: display_co2
-        lambda: |-
-          it.print(0, 0, id(font1), "CO2");
-          it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.0f",id(co2).state);
       - id: display_temp
         lambda: |-
           if (id(display_in_f).state) {
               it.print(0, 0, id(font1), "°F");
               it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.1f", id(temp).state*9/5+32);
             } else {
-              it.print(0, 0, id(font1), "°C");
+              it.print(0, 0, id(font1), "TEMP");
               it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.1f°C", id(temp).state);
             }
       - id: display_humidity
         lambda: |-
           it.print(0, 0, id(font1), "HUM");
           it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.0f%%",id(humidity).state);
+      - id: display_co2
+        lambda: |-
+          it.print(0, 0, id(font1), "CO2");
+          it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.0f",id(co2).state);
+      - id: display_pm2
+        lambda: |-
+          it.print(0, 0, id(font1), "PM2");
+          it.printf(64, 24, id(font1), TextAlign::TOP_RIGHT, "%.0f",id(pm_2_5).state);
+      - id: display_voc
+        lambda: |-
+          it.print(0, 0, id(font1), "VOC");
+          it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.0f",id(voc).state);
+      - id: display_nox
+        lambda: |-
+          it.print(0, 0, id(font1), "NOx");
+          it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.0f",id(nox).state);
+      - id: display_aqi
+        lambda: |-
+          it.print(0, 0, id(font1), "AQI");
+          it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%.0f",id(aqi_value).state);
+      - id: single_page
+        lambda: |-
+          if (id(display_in_f).state) {
+              it.printf(0, 0, id(font_large), "%.1f°", id(temp).state*9/5+32);
+            } else {
+              it.printf(0, 0, id(font_large), "%.1f°", id(temp).state);
+            }
+          it.printf(64, 28, id(font_small), TextAlign::TOP_RIGHT, "%.0f%%",id(humidity).state);
       - id: boot
         lambda: |-
           it.printf(64, 0, id(font1), TextAlign::TOP_RIGHT, "%s", get_mac_address().substr(6,8).c_str());
           it.printf(64, 22, id(font1), TextAlign::TOP_RIGHT, "%s", get_mac_address().substr(9,11).c_str());
     on_page_change:
+      - then:
+          - if:
+              condition:
+              - lambda: 'return (id(display_mode).current_option() == "AQI Based");'
+              then:
+                - display.page.show: !lambda |-
+                    if (id(aqi_value).state<125) {
+                      return id(single_page);
+                    } else {
+                      switch(id(global_aqi_source)) {
+                        case 0: return id(display_co2);
+                        case 1: return id(display_pm2);
+                        case 2: return id(display_voc);
+                        case 3: return id(display_nox);
+                        default: return id(single_page);
+                      }
+                    }
+                - component.update: oled_display
+          - if:
+              condition:
+              - lambda: 'return (id(display_mode).current_option() == "Single Page");'
+              then:
+                - display.page.show: single_page
+                - component.update: oled_display
       - to: boot
         then:
           - if:
@@ -52,7 +105,14 @@ display:
               then:
                 - display.page.show_next: oled_display
                 - component.update: oled_display
-
+      - to: single_page
+        then:
+          - if:
+              condition:
+              - lambda: 'return (id(display_mode).current_option() == "Rotation");'
+              then:
+                - display.page.show_next: oled_display
+                - component.update: oled_display
 
 interval:
   - interval: 10s
@@ -71,19 +131,67 @@ interval:
       - display.page.show_next: oled_display
       - component.update: oled_display
 
+select:
+  - platform: template
+    name: "Display mode"
+    id: display_mode
+    options:
+     - "Rotation"
+     - "Single Page"
+     - "AQI Based"
+    initial_option: "AQI Based"
+    optimistic: true
+    entity_category: config
 
 switch:
   - platform: template
     name: "Display Temperature in °F"
-    icon: "mdi:thermometer"
+    icon: mdi:thermometer
     id: display_in_f
-    restore_mode: RESTORE_DEFAULT_ON
-    optimistic: True
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+    disabled_by_default: false
+    assumed_state: false
 
   - platform: template
     name: "Display Boot Page"
     id: display_boot_page
-    restore_mode: ALWAYS_ON
-    optimistic: True
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
     entity_category: config
-    icon: "mdi:monitor"
+    icon: mdi:monitor
+    disabled_by_default: false
+    assumed_state: false
+
+  - platform: template
+    name: "Display Rotation"
+    id: display_rotation
+    restore_mode: RESTORE_DEFAULT_ON
+    optimistic: true
+    entity_category: config
+    icon: mdi:monitor
+    disabled_by_default: false
+    assumed_state: false
+    on_state: 
+      then:
+        lambda: |-
+          if (id(display_rotation).state)
+            id(oled_display).set_rotation(DISPLAY_ROTATION_180_DEGREES);
+          else
+            id(oled_display).set_rotation(DISPLAY_ROTATION_0_DEGREES);
+            
+  - platform: template
+    name: "Activate Screen"
+    id: activate_screen
+    restore_mode: RESTORE_DEFAULT_ON
+    optimistic: true
+    entity_category: config
+    icon: mdi:monitor
+    disabled_by_default: false
+    assumed_state: false
+    on_turn_on:
+      then: 
+      - lambda: id(oled_display).turn_on();
+    on_turn_off:
+      then:
+      - lambda: id(oled_display).turn_off();
